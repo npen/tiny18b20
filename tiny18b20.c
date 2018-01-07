@@ -35,6 +35,7 @@
 
 uint8_t do_read_temp = 1;
 uint8_t bl_counter = 2;
+uint8_t lcd_out = _BV(LCD_BL_BIT);
 
 void setup_pwr() {
 
@@ -73,16 +74,10 @@ inline void enable_power_down() {
     sleep_disable();
 }
 
-void write(uint8_t output) {
-
-    if (bl_counter) {
-        output |= _BV(LCD_BL_BIT);
-    } else {
-        output &= ~_BV(LCD_BL_BIT);
-    }
+void write_lcd() {
 
     for(int i = 7; i >= 0; i--) {
-        if (output & (1 << i)) {
+        if (lcd_out & (1 << i)) {
             PORTB |= (1<<PIN_SER);
         } else {
             PORTB &= ~(1<<PIN_SER);
@@ -95,51 +90,96 @@ void write(uint8_t output) {
     PORTB &= ~(1<<PIN_RCLK);
 }
 
-void write_4bits(uint8_t command, bool rs) {
+void write_4bits(uint8_t command) {
 
-    uint8_t output = 0;
-
-    if (rs) {
-        output |= (1 <<LCD_RS_BIT);
-    }
-
-    // output &= ~(1<<LCD_RS_BIT);
-    // output &= ~(1<<LCD_RW_BIT);
-    // output &= ~(1<<LCD_E_BIT);
-
-    output |= (1<<LCD_E_BIT);
+    // Write output on shift register for each pin change. Changing to many
+    // pins at the same time can lead to badly interpreted command on the LCD.
 
     if (command & (1<<7)) {
-        output |= (1<<LCD_DB7_BIT);
+        lcd_out |= _BV(LCD_DB7_BIT);
+    } else {
+        lcd_out &= ~_BV(LCD_DB7_BIT);
     }
+    write_lcd();
+
     if (command & (1<<6)) {
-        output |= (1<<LCD_DB6_BIT);
+        lcd_out |= _BV(LCD_DB6_BIT);
+    } else {
+        lcd_out &= ~_BV(LCD_DB6_BIT);
     }
+    write_lcd();
+
     if (command & (1<<5)) {
-        output |= (1<<LCD_DB5_BIT);
+        lcd_out |= _BV(LCD_DB5_BIT);
+    } else {
+        lcd_out &= ~_BV(LCD_DB5_BIT);
     }
+    write_lcd();
+
     if (command & (1<<4)) {
-        output |= (1<<LCD_DB4_BIT);
+        lcd_out |= _BV(LCD_DB4_BIT);
+    } else {
+        lcd_out &= ~_BV(LCD_DB4_BIT);
     }
+    write_lcd();
 
-    write(output);
+    lcd_out |= _BV(LCD_E_BIT);
+    write_lcd();
     _delay_us(1);
 
-    output &= ~(1<<LCD_E_BIT);
-
-    write(output);
+    lcd_out &= ~_BV(LCD_E_BIT);
+    write_lcd();
     _delay_us(1);
-
-    output |= (1<<LCD_E_BIT);
-
-    write(output);
-    _delay_us(100);
 }
 
 void write_8bits(uint8_t command, bool rs) {
 
-    write_4bits(command, rs);
-    write_4bits(command << 4, rs);
+    lcd_out &= ~_BV(LCD_RW_BIT);
+    if (rs) {
+        lcd_out |= _BV(LCD_RS_BIT);
+    } else {
+        lcd_out &= ~_BV(LCD_RS_BIT);
+    }
+    write_lcd();
+
+    write_4bits(command);
+    write_4bits(command << 4);
+}
+
+void lcd_clear_out() {
+
+    // LCD power consumption is reduced by enabling all outputs except E.
+
+    lcd_out |= _BV(LCD_RS_BIT);
+    write_lcd();
+
+    lcd_out |= _BV(LCD_RW_BIT);
+    write_lcd();
+
+    lcd_out &= ~_BV(LCD_E_BIT);
+    write_lcd();
+
+    lcd_out |= _BV(LCD_DB7_BIT);
+    write_lcd();
+
+    lcd_out |= _BV(LCD_DB6_BIT);
+    write_lcd();
+
+    lcd_out |= _BV(LCD_DB5_BIT);
+    write_lcd();
+
+    lcd_out |= _BV(LCD_DB4_BIT);
+    write_lcd();
+}
+
+void lcd_set_bl(bool enable) {
+
+    if (enable) {
+        lcd_out |= _BV(LCD_BL_BIT);
+    } else {
+        lcd_out &= ~_BV(LCD_BL_BIT);
+    }
+    write_lcd();
 }
 
 void clear_display() {
@@ -180,40 +220,40 @@ int main(void)
     // _delay_ms(2000);
 
     _delay_ms(50);
-    write(0x00);
+    write_lcd();
 
-    write_4bits(0b00110000, false);
+    write_4bits(0b00110000);
     _delay_ms(5);
 
-    write_4bits(0b00110000, false);
+    write_4bits(0b00110000);
     _delay_us(200);
 
-    write_4bits(0b00110000, false);
+    write_4bits(0b00110000);
     _delay_us(200);
 
-    write_4bits(0b00100000, false);
+    write_4bits(0b00100000);
     _delay_ms(5);
 
     // Function set
-    write_4bits(0b00100000, false);
-    write_4bits(0b10000000, false);
+    write_4bits(0b00100000);
+    write_4bits(0b10000000);
     _delay_ms(1);
 
     // Display off
-    write_4bits(0b00000000, false);
-    write_4bits(0b10000000, false);
+    write_4bits(0b00000000);
+    write_4bits(0b10000000);
     _delay_ms(1);
 
     clear_display();
 
     // Entry set
-    write_4bits(0b00000000, false);
-    write_4bits(0b01100000, false);
+    write_4bits(0b00000000);
+    write_4bits(0b01100000);
     _delay_ms(1);
 
     // Display on, cursor off, cursor blink
-    write_4bits(0b00000000, false);
-    write_4bits(0b11000000, false);
+    write_4bits(0b00000000);
+    write_4bits(0b11000000);
     _delay_ms(1);
 
     clear_display();
@@ -269,9 +309,11 @@ int main(void)
 
             write_char(223);
             write_char('C');
+
+            lcd_clear_out();
         }
 
-        write(_BV(LCD_E_BIT));
+        lcd_set_bl(bl_counter > 0);
 
         enable_watchdog();
         enable_power_down();
