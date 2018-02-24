@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
@@ -197,8 +198,29 @@ void write_char(unsigned char c) {
     _delay_us(40);
 }
 
-uint8_t bytes;
 char arr[8];
+
+void
+write_degrees(int16_t value) {
+
+    sprintf(arr, "%03d", value);
+
+    uint8_t len = strlen(arr);
+
+    for(uint8_t i = 0; i < (5 - len); i++) {
+        write_char(' ');
+    }
+
+    for(uint8_t i = 0; i < len; i++) {
+        if (i == len - 2) {
+            write_char(',');
+        }
+        write_char(arr[i]);
+    }
+
+    write_char(223);
+    write_char('C');
+}
 
 int main(void)
 {
@@ -285,30 +307,15 @@ int main(void)
             uint8_t lsb = onewire0_readbyte();
             uint8_t msb = onewire0_readbyte();
 
-            int8_t e = (msb << 4) | (lsb >> 4 & 0xF);
-            uint16_t f = 0;
 
-            if (lsb & 0x08)
-                f = f + 50;
-            if (lsb & 0x04)
-                f = f + 25;
-            if (lsb & 0x02)
-                f = f + 12;
-            if (lsb & 0x01)
-                f = f + 6;
+            int16_t value = (msb << 8) | (lsb);
+            value = (int32_t)value * 100 / 16;
+
 
             clear_display();
 
-            sprintf(arr, "%u,%02u", e, f);
+            write_degrees(value);
 
-            char *p = arr;
-            while(*p) {
-                write_char(*p);
-                p++;
-            }
-
-            write_char(223);
-            write_char('C');
 
             lcd_clear_out();
         }
