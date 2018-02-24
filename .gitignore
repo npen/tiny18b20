@@ -1,3 +1,11 @@
+*.bin
+*.elf
+*.hex
+*.lst
+*.o
+*.mqp
+*.srec
+*.a
 *.un~
 *.swp
 
