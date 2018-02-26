@@ -37,6 +37,7 @@
 uint8_t do_read_temp = 1;
 uint8_t bl_counter = 2;
 uint8_t lcd_out = _BV(LCD_BL_BIT);
+int16_t min_temp = 99;
 
 void setup_pwr() {
 
@@ -193,6 +194,11 @@ void return_home() {
     _delay_ms(2);
 }
 
+void move_to(uint8_t addr) {
+    write_8bits(0b0010000000 | addr, false);
+    _delay_ms(2);
+}
+
 void write_char(unsigned char c) {
     write_8bits(c, true);
     _delay_us(40);
@@ -311,11 +317,16 @@ int main(void)
             int16_t value = (msb << 8) | (lsb);
             value = (int32_t)value * 100 / 16;
 
+            if (min_temp > value) {
+                min_temp = value;
+            }
 
             clear_display();
 
             write_degrees(value);
 
+            move_to(0x40);
+            write_degrees(min_temp);
 
             lcd_clear_out();
         }
