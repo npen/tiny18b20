@@ -80,7 +80,7 @@ static void _starttimer(void)
 	GTCCR &= ~( 1<<TSM );
 }
 
-inline void _medtimer(void)
+static inline void _medtimer(void)
 {
 	// Halt the counter for a moment to reconfigure
 	GTCCR |= ( 1<<TSM | 1<<PSR0 );
@@ -94,7 +94,7 @@ inline void _medtimer(void)
 	GTCCR &= ~( 1<<TSM );
 }
 
-inline void _delaytimer(void)
+static inline void _delaytimer(void)
 {
 	// Halt the counter for a moment to reconfigure
 	GTCCR |= ( 1<<TSM | 1<<PSR0 );
@@ -119,7 +119,7 @@ inline void _delaytimer(void)
 **  small delay.
 */
 
-inline void _fasttimer(void)
+static inline void _fasttimer(void)
 {
 	if ((TCCR0B & 0x07) != PRESCALER) {
 		// Halt the counter for a moment to reconfigure
@@ -173,14 +173,14 @@ static void _setbit(volatile uint8_t *cp, uint8_t bit_id, uint8_t value)
 
 // Set a strong pullup on the 1-wire bus (active low)
 
-inline void _enable_strong(void)
+static inline void _enable_strong(void)
 {
 	// PORTB &= ~(1 << ONEWIRE_STRONG_PIN);
 }
 
 // Disable a strong pullup (active low)
 
-inline void _disable_strong(void) {
+static inline void _disable_strong(void) {
 	// PORTB |= (1 << ONEWIRE_STRONG_PIN);
 }
 
@@ -211,14 +211,14 @@ void onewire0_init(void)
 	_starttimer();
 }
 
-inline void _release(void)
+static inline void _release(void)
 {
 	_disable_strong();
 	PORTB &= ~( PIN );  // Disable weak pullup
 	DDRB &= ~( PIN );   // Set pin mode to input
 }
 
-inline void _pulllow(void)
+static inline void _pulllow(void)
 {
 	_disable_strong();
 	// PORTB is expected to be low at this point

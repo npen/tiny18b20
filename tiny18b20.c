@@ -62,12 +62,12 @@ void configure_watchdog() {
     WDTCR |= _BV(WDP3) | _BV(WDP0);
 }
 
-inline void enable_watchdog() {
+static inline void enable_watchdog() {
 
     WDTCR |= _BV(WDIE) | _BV(WDCE) | _BV(WDE);
 }
 
-inline void enable_power_down() {
+static inline void enable_power_down() {
 
     cli();
     sleep_enable();
